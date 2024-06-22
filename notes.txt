@@ -1303,8 +1303,6 @@ debug options
 -------------
 
 
-++++ ./doc/pages/command-parsing.asciidoc
-
 = Command Parsing
 
 Kakoune commands, either loaded from a script or written in the command
@@ -1402,7 +1400,6 @@ expansion types are the same as for `%`-strings.
 - For any other *expansion type*, a parsing error is raised.
 
 
-++++ ./doc/pages/registers.asciidoc
 
 = Registers
 
@@ -1520,8 +1517,6 @@ with:
     0-based index of the main selection
 
 
-++++ ./doc/pages/buffers.asciidoc
-
 = Buffers
 
 == Commands
@@ -1584,8 +1579,6 @@ When the write end of the FIFO is closed, the buffer becomes an ordinary
 Kakoune closes the read end of the FIFO. Any program writing to the FIFO
 will receive `SIGPIPE`, which will terminate the program by default.
 
-
-++++ ./doc/pages/regex.asciidoc
 
 = Regex
 
@@ -1782,7 +1775,6 @@ exists for ease of use, or performance reasons:
   on ECMAScript UTF-16 surrogate pairs with 4 digits.
 
 
-++++ ./doc/autoedit.asciidoc
 
 Edition auto insertion in Kakoune
 =================================
@@ -1871,9 +1863,6 @@ wrapped in a try command. So we would have:
 :hook InsertChar \n %[ try %[ exec -draft k<a-x> <a-k>[{(]\h*$<ret> j<a-gt> ] ]
 -------------------------------------------------------------------------------
 
-
-
-++++ ./doc/interfacing.asciidoc
 
 Interfacing Kakoune with external programs
 ==========================================
@@ -2018,16 +2007,4 @@ nop %sh{ { # launch a detached shell
         kak -p ${kak_session}
 } > /dev/null 2>&1 < /dev/null & }
 -----
-
-++++ ./rc/tools/doc.asciidoc
-
-= Kakoune's online documentation
-
-This is Kakoune's online documentation system.
-
-To see what documentation topics are available, type `:doc` and look at the
-completion menu.  To view a particular topic, type its name or select it
-from the completion menu.  Then hit Enter.
-
-Documentation will be displayed in the client named in the `docsclient` option.
 

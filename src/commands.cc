@@ -8,6 +8,7 @@
 #include "command_manager.hh"
 #include "completion.hh"
 #include "context.hh"
+#include "debug.hh"
 #include "event_manager.hh"
 #include "face_registry.hh"
 #include "file.hh"
@@ -31,7 +32,6 @@
 #include "user_interface.hh"
 #include "window.hh"
 
-#include <functional>
 #include <utility>
 
 #include <sys/types.h>
@@ -277,7 +277,7 @@ struct ShellScriptCompleter
             { { "token_to_complete", to_string(token_to_complete) },
               { "pos_in_token",      to_string(pos_in_token) } }
         };
-        String output = ShellManager::instance().eval(m_shell_script, context, {},
+        String output = ShellManager::instance().eval(m_shell_script, context, StringView{},
                                                       ShellManager::Flags::WaitForStdout,
                                                       shell_context).first;
         CandidateList candidates;
@@ -2081,7 +2081,9 @@ void context_wrap(const ParametersParser& parser, Context& context, StringView d
                 context_wrap_for_buffer(*buffer);
         }
         else
-            for (auto&& name : *bufnames | split<StringView>(','))
+            for (auto&& name : *bufnames
+                             | split<StringView>(',', '\\')
+                             | transform(unescape<',', '\\'>))
                 context_wrap_for_buffer(BufferManager::instance().get_buffer(name));
         return;
     }
@@ -2202,7 +2204,7 @@ const CommandDesc execute_keys_cmd = {
             ScopedSetBool disable_hooks(context.hooks_disabled(), not parser.get_switch("with-hooks"));
 
             for (auto& key : parser | transform(parse_keys) | flatten())
-                context.input_handler().handle_key(key);
+                context.input_handler().handle_key(key, true);
         });
     }
 };
@@ -2480,8 +2482,9 @@ const CommandDesc set_face_cmd = {
     "    <fg color>[,<bg color>[,<underline color>]][+<attributes>][@<base>]\n"
     "colors are either a color name, rgb:######, or rgba:######## values.\n"
     "attributes is a combination of:\n"
-    "    u: underline, c: curly underline, i: italic, b: bold,\n"
-    "    r: reverse,   s: strikethrough,   B: blink,  d: dim,\n"
+    "    u: underline, c: curly underline, U: double underline,\n"
+    "    i: italic,            b: bold,            r: reverse,\n"
+    "    s: strikethrough,     B: blink,           d: dim,\n"
     "    f: final foreground,              g: final background,\n"
     "    a: final attributes,              F: same as +fga\n"
     "facespec can as well just be the name of another face.\n"
@@ -2675,7 +2678,7 @@ void enter_user_mode(Context& context, String mode_name, KeymapMode mode, bool l
         ScopedEdition edition(context);
 
         for (auto& key : context.keymaps().get_mapping_keys(key, mode))
-            context.input_handler().handle_key(key);
+            context.input_handler().handle_key(key, true);
 
         if (lock)
             enter_user_mode(context, std::move(mode_name), mode, true);

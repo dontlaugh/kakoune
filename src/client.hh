@@ -1,7 +1,7 @@
 #ifndef client_hh_INCLUDED
 #define client_hh_INCLUDED
 
-#include "constexpr_utils.hh"
+#include "array.hh"
 #include "display_buffer.hh"
 #include "env_vars.hh"
 #include "input_handler.hh"
@@ -48,11 +48,16 @@ public:
     void info_show(DisplayLine title, DisplayLineList content, BufferCoord anchor, InfoStyle style);
     void info_show(StringView title, StringView content, BufferCoord anchor, InfoStyle style);
     void info_hide(bool even_modal = false);
+    bool info_pending() const { return m_ui_pending & PendingUI::InfoShow; };
+    bool status_line_pending() const { return m_ui_pending & PendingUI::StatusLine; };
 
     void print_status(DisplayLine status_line);
     const DisplayLine& current_status() const { return m_status_line; }
 
     DisplayCoord dimensions() const;
+
+    void schedule_clear();
+    void clear_pending();
 
     void force_redraw(bool full = false);
     void redraw_ifn();
@@ -108,6 +113,16 @@ private:
         Refresh    = 1 << 7,
     };
     int m_ui_pending = 0;
+
+    enum class PendingClear
+    {
+        None = 0,
+        Info = 0b01,
+        StatusLine = 0b10
+    };
+    friend constexpr bool with_bit_ops(Meta::Type<PendingClear>) { return true; }
+    PendingClear m_pending_clear = PendingClear::None;
+
 
     struct Menu
     {

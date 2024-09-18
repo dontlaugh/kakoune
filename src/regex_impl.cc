@@ -1,14 +1,14 @@
 #include "regex_impl.hh"
 
-#include "exception.hh"
 #include "string.hh"
 #include "unicode.hh"
 #include "unit_tests.hh"
 #include "utf8.hh"
 #include "utf8_iterator.hh"
-#include "string_utils.hh"
+#include "format.hh"
 #include "vector.hh"
 #include "utils.hh"
+#include "ranges.hh"
 
 #include <cstdio>
 #include <cstring>
@@ -18,6 +18,9 @@ namespace Kakoune
 {
 
 constexpr Codepoint CompiledRegex::StartDesc::count;
+
+namespace
+{
 
 struct ParsedRegex
 {
@@ -73,9 +76,6 @@ struct ParsedRegex
     uint32_t capture_count;
 };
 
-namespace
-{
-
 template<RegexMode mode = RegexMode::Forward>
 struct Children
 {
@@ -123,12 +123,14 @@ struct Children
     const Index m_index;
 };
 
-}
 
 // Recursive descent parser based on naming used in the ECMAScript
 // standard, although the syntax is not fully compatible.
 struct RegexParser
 {
+    static ParsedRegex parse(StringView re) { return RegexParser{re}.m_parsed_regex; }
+
+private:
     RegexParser(StringView re)
         : m_regex{re}, m_pos{re.begin(), re}
     {
@@ -138,11 +140,6 @@ struct RegexParser
         kak_assert(root == 0);
     }
 
-    ParsedRegex get_parsed_regex() { return std::move(m_parsed_regex); }
-
-    static ParsedRegex parse(StringView re) { return RegexParser{re}.get_parsed_regex(); }
-
-private:
     struct InvalidPolicy
     {
         Codepoint operator()(Codepoint cp) const { throw regex_error{"Invalid utf8 in regex"}; }
@@ -268,9 +265,12 @@ private:
                 }
                 m_pos = Iterator{it, m_regex};
                 NodeIndex lookaround = alternative(op);
-                if (at_end() or *m_pos++ != ')')
+                if (auto end_pos = m_pos; at_end() or *m_pos++ != ')')
+                {
+                    if (*end_pos == '|')
+                        parse_error("Alternations cannot be used in lookarounds");
                     parse_error("unclosed parenthesis");
-
+                }
                 validate_lookaround(lookaround);
                 return lookaround;
             }
@@ -1081,6 +1081,8 @@ private:
     ParsedRegex& m_parsed_regex;
 };
 
+}
+
 String dump_regex(const CompiledRegex& program)
 {
     String res;
@@ -1608,6 +1610,22 @@ auto test_regex = UnitTest{[]{
         kak_assert(eq(vm.named_captures[1], {"month", 2}));
         kak_assert(eq(vm.named_captures[2], {"day", 3}));
     }
+
+    auto check_parse_error = [](StringView re, StringView expected_error) {
+        try
+        {
+            TestVM<>{re};
+            kak_assert(false);
+        }
+        catch (const regex_error& err)
+        {
+            kak_assert(err.what() == String{"regex parse error: "} + expected_error);
+        }
+    };
+
+    check_parse_error("(?=a*)", "Quantifiers cannot be used in lookarounds at '(?=a*)<<<HERE>>>'");
+    check_parse_error("(?=(a))", "Lookaround can only contain literals, any chars or character classes at '(?=(a))<<<HERE>>>'");
+    check_parse_error("(?=a|b)", "Alternations cannot be used in lookarounds at '(?=a|<<<HERE>>>b)'");
 }};
 
 }

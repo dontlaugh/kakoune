@@ -6,6 +6,7 @@
 #include "meta.hh"
 #include "string.hh"
 #include "units.hh"
+#include "array.hh"
 #include "vector.hh"
 
 #include <sys/types.h>

@@ -2,10 +2,11 @@
 
 #include "alias_registry.hh"
 #include "assert.hh"
-#include "buffer_utils.hh"
 #include "context.hh"
+#include "debug.hh"
 #include "flags.hh"
 #include "file.hh"
+#include "hook_manager.hh"
 #include "optional.hh"
 #include "option_types.hh"
 #include "profile.hh"
@@ -13,6 +14,7 @@
 #include "regex.hh"
 #include "register_manager.hh"
 #include "shell_manager.hh"
+#include "scope.hh"
 #include "utils.hh"
 #include "unit_tests.hh"
 
@@ -348,7 +350,8 @@ void expand_token(Token&& token, const Context& context, const ShellContext& she
     case Token::Type::ShellExpand:
     {
         auto str = ShellManager::instance().eval(
-            content, context, {}, ShellManager::Flags::WaitForStdout,
+            content, context, StringView{},
+            ShellManager::Flags::WaitForStdout,
             shell_context).first;
 
         if (not str.empty() and str.back() == '\n')

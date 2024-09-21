@@ -1,4 +1,4 @@
-image: alpine
+image: alpine/latest
 packages:
   - meson
   - ninja
@@ -9,13 +9,15 @@ packages:
   - musl-dev
 
 sources:
-  - . # the current one
+  - "https://git.sr.ht/~coleman/kakoune"
 
 tasks:
   - setup: |
+      cd kakoune
       mkdir buildDir
       meson setup buildDir
 
   - build: |
+      cd kakoune
       meson compile -C buildDir
 

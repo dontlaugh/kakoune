@@ -1,6 +1,7 @@
 
 kak_srcs_cc = files(
 #  'main.cc',
+  '.version.cc',
   'alias_registry.cc',
   'assert.cc',
   'backtrace.cc',
@@ -36,7 +37,6 @@ kak_srcs_cc = files(
   'keymap_manager.cc',
   'keys.cc',
   'line_modification.cc',
-  'main.cc',
   'memory.cc',
   'normal.cc',
   'option_manager.cc',

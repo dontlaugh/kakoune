@@ -1,7 +1,17 @@
 
+# Custom target to generate the version file using the output of 'git describe --tags HEAD'
+version_file = custom_target(
+  'version_file',
+  output: '.version.cc',
+  command: [
+    'sh', '-c', 'echo \'namespace Kakoune { const char *version = "\'`git describe --tags HEAD`\'"; }\' > @OUTPUT@'
+  ],
+)
+
+
 kak_srcs_cc = files(
-#  'main.cc',
-  '.version.cc',
+  # 'main.cc',  # excluded in favor of custom entrypoint
+  # '.version.cc',  # generated with custom_target
   'alias_registry.cc',
   'assert.cc',
   'backtrace.cc',
@@ -62,7 +72,7 @@ kak_srcs_cc = files(
 )
 
 
-libkak = library('libkak', kak_srcs_cc,
+libkak = library('libkak', kak_srcs_cc + [version_file],
                         include_directories : include_directories('.'))
 
 libkak_dep = declare_dependency(link_with : libkak,

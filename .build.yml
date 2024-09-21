@@ -1,0 +1,21 @@
+image: alpine
+packages:
+  - meson
+  - ninja
+  - gcc
+  - g++
+  - make
+  - pkgconf
+  - musl-dev
+
+sources:
+  - . # the current one
+
+tasks:
+  - setup: |
+      mkdir buildDir
+      meson setup buildDir
+
+  - build: |
+      meson compile -C buildDir
+

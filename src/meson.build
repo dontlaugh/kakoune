@@ -72,7 +72,7 @@ kak_srcs_cc = files(
 )
 
 
-libkak = library('libkak', kak_srcs_cc + [version_file],
+libkak = library('kak', kak_srcs_cc + [version_file],
                         include_directories : include_directories('.'))
 
 libkak_dep = declare_dependency(link_with : libkak,

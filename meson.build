@@ -24,3 +24,5 @@ kakoune_deps = [libkak_dep]
 executable('kak', sources : colemans_custom_sauce,
            dependencies : kakoune_deps,
            install : true)
+install_man('doc/kak.1')
+meson.add_install_script('contrib/meson-install.sh')

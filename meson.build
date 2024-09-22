@@ -17,7 +17,10 @@ subdir('src')
 colemans_custom_sauce = ['main.cc'] 
 kakoune_deps = [libkak_dep]
 
-executable('kak', sources: colemans_custom_sauce,
+# The kak binary built from the main.cc in the root is a copy of src/main.cc
+# The goal is to provide a custom entrypoint for hacks and experiments. As
+# long as upstream keeps all the actual source code under src/ we'll be able
+# to merge in changes without much trouble.
+executable('kak', sources : colemans_custom_sauce,
            dependencies : kakoune_deps,
            install : true)
-

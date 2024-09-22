@@ -12,6 +12,8 @@
 namespace Kakoune
 {
 
+enum class Hook;
+
 // A Window is a view onto a Buffer
 class Window final : public SafeCountable, public Scope, private OptionManagerWatcher
 {

@@ -1,0 +1,81 @@
+
+# Custom target to generate the version file using the output of 'git describe --tags HEAD'
+version_file = custom_target(
+  'version_file',
+  output: '.version.cc',
+  command: [
+    'sh', '-c', 'echo \'namespace Kakoune { const char *version = "\'`git describe --tags HEAD`\'"; }\' > @OUTPUT@'
+  ],
+)
+
+
+kak_srcs_cc = files(
+  # 'main.cc',  # excluded in favor of custom entrypoint
+  # '.version.cc',  # generated with custom_target
+  'alias_registry.cc',
+  'assert.cc',
+  'backtrace.cc',
+  'buffer.cc',
+  'buffer_manager.cc',
+  'buffer_utils.cc',
+  'changes.cc',
+  'client.cc',
+  'client_manager.cc',
+  'color.cc',
+  'command_manager.cc',
+  'commands.cc',
+  'completion.cc',
+  'context.cc',
+  'debug.cc',
+  'display_buffer.cc',
+  'env_vars.cc',
+  'event_manager.cc',
+  'exception.cc',
+  'face_registry.cc',
+  'file.cc',
+  'format.cc',
+  'hash.cc',
+  'hash_map.cc',
+  'highlighter.cc',
+  'highlighter_group.cc',
+  'highlighters.cc',
+  'hook_manager.cc',
+  'input_handler.cc',
+  'insert_completer.cc',
+  'json.cc',
+  'json_ui.cc',
+  'keymap_manager.cc',
+  'keys.cc',
+  'line_modification.cc',
+  'memory.cc',
+  'normal.cc',
+  'option_manager.cc',
+  'option_types.cc',
+  'parameters_parser.cc',
+  'ranges.cc',
+  'ranked_match.cc',
+  'regex.cc',
+  'regex_impl.cc',
+  'register_manager.cc',
+  'remote.cc',
+  'scope.cc',
+  'selection.cc',
+  'selectors.cc',
+  'shared_string.cc',
+  'shell_manager.cc',
+  'string.cc',
+  'string_utils.cc',
+  'terminal_ui.cc',
+  'unit_tests.cc',
+  'window.cc',
+  'word_db.cc',
+)
+
+
+libkak = static_library('kak', kak_srcs_cc + [version_file],
+                        include_directories : include_directories('.'))
+
+libkak_dep = declare_dependency(link_with : libkak,
+                                include_directories : include_directories('.'))
+
+

@@ -1,0 +1,23 @@
+image: alpine/latest
+packages:
+  - meson
+  - ninja
+  - gcc
+  - g++
+  - make
+  - pkgconf
+  - musl-dev
+
+sources:
+  - "https://git.sr.ht/~coleman/kakoune"
+
+tasks:
+  - setup: |
+      cd kakoune
+      mkdir buildDir
+      meson setup buildDir
+
+  - build: |
+      cd kakoune
+      meson compile -C buildDir
+

@@ -196,12 +196,15 @@ define-command -params 1.. \
         buffile_relative=${kak_buffile#"$(git rev-parse --show-toplevel)/"}
         echo >${kak_command_fifo} "evaluate-commands -save-regs | %{
             set-register | %{ cat >${kak_response_fifo} }
-            execute-keys -client ${kak_client} -draft %{%<a-|><ret>}
+            execute-keys -draft %{%<a-|><ret>}
         }"
         git show "$rev:${buffile_relative}" |
             diff - ${kak_response_fifo} "$@" |
-            sed -e "1c--- a/$buffile_relative" \
-                -e "2c+++ b/$buffile_relative"
+            awk -v buffile_relative="$buffile_relative" '
+                NR == 1 { print "--- a/" buffile_relative }
+                NR == 2 { print "+++ b/" buffile_relative }
+                NR > 2
+            '
     }
 
     blame_toggle() {

@@ -1,6 +1,7 @@
 #include "buffer_utils.hh"
 
 #include "buffer_manager.hh"
+#include "coord.hh"
 #include "event_manager.hh"
 #include "file.hh"
 #include "selection.hh"
@@ -165,7 +166,7 @@ void reload_file_buffer(Buffer& buffer)
     buffer.flags() &= ~Buffer::Flags::New;
 }
 
-Buffer* create_fifo_buffer(String name, int fd, Buffer::Flags flags, bool scroll)
+Buffer* create_fifo_buffer(String name, int fd, Buffer::Flags flags, AutoScroll scroll)
 {
     static ValueId fifo_watcher_id = get_free_value_id();
 
@@ -185,7 +186,7 @@ Buffer* create_fifo_buffer(String name, int fd, Buffer::Flags flags, bool scroll
 
     struct FifoWatcher : FDWatcher
     {
-        FifoWatcher(int fd, Buffer& buffer, bool scroll)
+        FifoWatcher(int fd, Buffer& buffer, AutoScroll scroll)
             : FDWatcher(fd, FdEvents::Read, EventMode::Normal,
                         [](FDWatcher& watcher, FdEvents, EventMode mode) {
                             if (mode == EventMode::Normal)
@@ -214,7 +215,7 @@ Buffer* create_fifo_buffer(String name, int fd, Buffer::Flags flags, bool scroll
             bool closed = false;
             size_t loop = 0;
             char data[buffer_size];
-            BufferCoord insert_coord = m_buffer.back_coord();
+            Optional<BufferCoord> insert_begin;
             const int fifo = fd();
 
             {
@@ -232,17 +233,27 @@ Buffer* create_fifo_buffer(String name, int fd, Buffer::Flags flags, bool scroll
 
                     auto pos = m_buffer.back_coord();
                     const bool is_first = pos == BufferCoord{0,0};
-                    if (not m_scroll and (is_first or m_had_trailing_newline))
+                    if ((m_scroll == AutoScroll::No and (is_first or m_had_trailing_newline))
+                        or (m_scroll == AutoScroll::NotInitially and is_first))
                         pos = m_buffer.next(pos);
 
-                    pos = m_buffer.insert(pos, StringView(data, data+count)).end;
+                    auto inserted_range = m_buffer.insert(pos, StringView(data, data+count));
+                    if (not insert_begin)
+                        insert_begin = inserted_range.begin;
+                    pos = inserted_range.end;
 
                     bool have_trailing_newline = (data[count-1] == '\n');
-                    if (not m_scroll)
+                    if (m_scroll != AutoScroll::Yes)
                     {
                         if (is_first)
+                        {
                             m_buffer.erase({0,0}, m_buffer.next({0,0}));
-                        else if (not m_had_trailing_newline and have_trailing_newline)
+                            --insert_begin->line;
+                            if (m_scroll == AutoScroll::NotInitially and have_trailing_newline)
+                                m_buffer.insert(m_buffer.end_coord(), "\n");
+                        }
+                        else if (m_scroll == AutoScroll::No and
+                                 not m_had_trailing_newline and have_trailing_newline)
                             m_buffer.erase(m_buffer.prev(pos), pos);
                     }
                     m_had_trailing_newline = have_trailing_newline;
@@ -250,17 +261,21 @@ Buffer* create_fifo_buffer(String name, int fd, Buffer::Flags flags, bool scroll
                 while (++loop < max_loop  and fd_readable(fifo));
             }
 
-            if (insert_coord != m_buffer.back_coord())
+            if (insert_begin)
+            {
+                auto insert_back = (m_had_trailing_newline and m_scroll == AutoScroll::No)
+                                 ? m_buffer.back_coord() : m_buffer.prev(m_buffer.back_coord());
                 m_buffer.run_hook_in_own_context(
                     Hook::BufReadFifo,
-                    selection_to_string(ColumnType::Byte, m_buffer, {insert_coord, m_buffer.back_coord()}));
+                    selection_to_string(ColumnType::Byte, m_buffer, {*insert_begin, insert_back}));
+            }
 
             if (closed)
                 m_buffer.values().erase(fifo_watcher_id); // will delete this
         }
 
         Buffer& m_buffer;
-        bool m_scroll;
+        AutoScroll m_scroll;
         bool m_had_trailing_newline = false;
     };
 

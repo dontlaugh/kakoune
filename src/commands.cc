@@ -76,7 +76,7 @@ Buffer* open_fifo(StringView name, StringView filename, Buffer::Flags flags, boo
     if (fd < 0)
        throw runtime_error(format("unable to open '{}'", filename));
 
-    return create_fifo_buffer(name.str(), fd, flags, scroll);
+    return create_fifo_buffer(name.str(), fd, flags, scroll ? AutoScroll::Yes : AutoScroll::No);
 }
 
 template<typename... Completers> struct PerArgumentCommandCompleter;
@@ -618,7 +618,7 @@ void do_write_buffer(Context& context, Optional<String> filename, WriteFlags fla
     auto method = write_method.value_or_compute([&] { return context.options()["writemethod"].get<WriteMethod>(); });
 
     context.hooks().run_hook(Hook::BufWritePre, effective_filename, context);
-    write_buffer_to_file(buffer, effective_filename, method, flags);
+    write_buffer_to_file(context, buffer, effective_filename, method, flags);
     context.hooks().run_hook(Hook::BufWritePost, effective_filename, context);
 }
 
@@ -673,7 +673,7 @@ void write_all_buffers(const Context& context, bool sync = false, Optional<Write
             auto method = write_method.value_or_compute([&] { return context.options()["writemethod"].get<WriteMethod>(); });
             auto flags = sync ? WriteFlags::Sync : WriteFlags::None;
             buffer->run_hook_in_own_context(Hook::BufWritePre, buffer->name(), context.name());
-            write_buffer_to_file(*buffer, buffer->name(), method, flags);
+            write_buffer_to_file(context, *buffer, buffer->name(), method, flags);
             buffer->run_hook_in_own_context(Hook::BufWritePost, buffer->name(), context.name());
         }
     }
@@ -1555,7 +1555,7 @@ const CommandDesc echo_cmd = {
             message.push_back('\n');
 
         if (auto filename = parser.get_switch("to-file"))
-            write_to_file(*filename, message);
+            write_to_file(context, *filename, message);
         else if (auto command = parser.get_switch("to-shell-script"))
             ShellManager::instance().eval(*command, context, message, ShellManager::Flags::None, shell_context);
         else if (parser.get_switch("debug"))

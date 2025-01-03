@@ -689,16 +689,6 @@ pid_t fork_server_to_background()
 
 std::unique_ptr<UserInterface> create_local_ui(UIType ui_type)
 {
-    if (ui_type == UIType::Terminal and not isatty(0))
-    {
-        // move stdin to another fd, and restore tty as stdin
-        int fd = dup(0);
-        int tty = open("/dev/tty", O_RDONLY);
-        dup2(tty, 0);
-        close(tty);
-        create_fifo_buffer("*stdin*", fd, Buffer::Flags::None);
-    }
-
     auto ui = make_ui(ui_type);
 
     static SignalHandler old_handler = set_signal_handler(SIGTSTP, [](int sig) {
@@ -885,6 +875,16 @@ int run_server(StringView session, StringView server_init,
     int exit_status = 0;
     try
     {
+        if (ui_type == UIType::Terminal and not isatty(0))
+        {
+            // move stdin to another fd, and restore tty as stdin
+            int fd = dup(0);
+            int tty = open("/dev/tty", O_RDONLY);
+            dup2(tty, 0);
+            close(tty);
+            create_fifo_buffer("*stdin*", fd, Buffer::Flags::None, AutoScroll::NotInitially);
+        }
+
         if (not server.is_daemon())
         {
             local_client = client_manager.create_client(
@@ -908,14 +908,16 @@ int run_server(StringView session, StringView server_init,
 
             // Loop so that eventual inputs happening during the processing are handled as
             // well, avoiding unneeded redraws.
-            bool allow_blocking = not client_manager.has_pending_inputs();
+            Optional<std::chrono::nanoseconds> timeout;
+            if (client_manager.has_pending_inputs())
+                timeout = std::chrono::nanoseconds{};
             try
             {
-                while (event_manager.handle_next_events(EventMode::Normal, nullptr, allow_blocking))
+                while (event_manager.handle_next_events(EventMode::Normal, nullptr, timeout))
                 {
                     if (client_manager.process_pending_inputs())
                         break;
-                    allow_blocking = false;
+                    timeout = std::chrono::nanoseconds{};
                 }
             }
             catch (const cancel&) {}
@@ -1005,14 +1007,15 @@ int run_filter(StringView keystr, ConstArrayView<StringView> files, bool quiet, 
             }
         };
 
+        Context empty_context{Context::EmptyContextFlag{}};
         for (auto& file : files)
         {
             Buffer* buffer = open_file_buffer(file, Buffer::Flags::NoHooks);
             if (not suffix_backup.empty())
-                write_buffer_to_file(*buffer, buffer->name() + suffix_backup,
+                write_buffer_to_file(empty_context, *buffer, buffer->name() + suffix_backup,
                                      WriteMethod::Overwrite, WriteFlags::None);
             apply_to_buffer(*buffer);
-            write_buffer_to_file(*buffer, buffer->name(),
+            write_buffer_to_file(empty_context, *buffer, buffer->name(),
                                  WriteMethod::Overwrite, WriteFlags::None);
             buffer_manager.delete_buffer(*buffer);
         }

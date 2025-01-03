@@ -242,7 +242,7 @@ public:
         {
             for (int i = m_program.save_count-1; i >= 0; --i)
                 saves.pos[i].~Iterator();
-            operator delete(saves.pos, m_program.save_count * sizeof(Iterator));
+            operator delete(saves.pos);
         }
     }
 

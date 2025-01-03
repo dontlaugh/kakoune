@@ -72,10 +72,17 @@ kak_srcs_cc = files(
 )
 
 
-libkak = static_library('kak', kak_srcs_cc + [version_file],
-                        include_directories : include_directories('.'))
+# libkak = static_library('kak', kak_srcs_cc + [version_file],
+#                         include_directories : include_directories('.'))
 
-libkak_dep = declare_dependency(link_with : libkak,
-                                include_directories : include_directories('.'))
+# libkak_dep = declare_dependency(link_with : libkak,
+#                                 include_directories : include_directories('.'))
 
 
+# colemans_custom_sauce = ['main.cc'] + kak_srcs_cc + version_file
+# kakoune_deps = [libkak_dep]
+
+
+# executable('kak', sources : colemans_custom_sauce,
+#            # include_directories : inc,
+#            install : true)
